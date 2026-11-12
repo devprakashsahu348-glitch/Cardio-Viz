@@ -20,8 +20,12 @@ export const db = async () => { const { neon } = await import('@neondatabase/ser
 export const user = req => { const o = verify(getCookie(req, 'cv_s')); return o && o.uid ? o : null; };
 export const isAdmin = req => { const o = verify(getCookie(req, 'cv_a')); return !!(o && o.admin); };
 export const ready = (res, ...need) => { const m = need.filter(k => !process.env[k]); if (m.length) { res.status(500).json({ error: 'Server is not configured.' }); return false; } return true; };
+export const mailOn = () => !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
 export async function mail(to, subject, text) {
-  if (!process.env.BREVO_API_KEY || !process.env.SENDER_EMAIL) return;
-  try { await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json' },
-    body: JSON.stringify({ sender: { name: 'CardioViz', email: process.env.SENDER_EMAIL }, to: [{ email: to }], subject, textContent: text }) }); } catch { /* email is best effort */ }
+  if (!mailOn()) return;
+  try {
+    const { default: nodemailer } = await import('nodemailer');
+    const t = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD } });
+    await t.sendMail({ from: `"CardioViz" <${process.env.GMAIL_USER}>`, to, subject, text });
+  } catch { console.error('email send failed'); }
 }

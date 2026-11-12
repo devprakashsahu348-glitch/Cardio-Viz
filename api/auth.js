@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
-import { body, db, sign, setCookie, hash, check, same, user, ready, mail } from './_lib.js';
+import { body, db, sign, setCookie, hash, check, same, user, ready, mail, mailOn } from './_lib.js';
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/, AGE = 14 * 86400;
-const mailOn = () => !!(process.env.BREVO_API_KEY && process.env.SENDER_EMAIL);
 const dig = (email, purpose, code) => crypto.createHash('sha256').update(`${process.env.AUTH_SECRET}|${email}|${purpose}|${code}`).digest('hex');
 async function sendOtp(sql, email, name, purpose) {
   const recent = await sql`SELECT 1 FROM otps WHERE email = ${email} AND purpose = ${purpose} AND created_at > now() - interval '60 seconds'`;
