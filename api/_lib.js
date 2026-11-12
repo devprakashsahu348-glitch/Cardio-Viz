@@ -14,6 +14,7 @@ export const setCookie = (res, n, v, age) => res.setHeader('Set-Cookie', `${n}=$
 export const body = req => { let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = {}; } } return b || {}; };
 export const hash = pw => { const s = crypto.randomBytes(16).toString('hex'); return s + ':' + crypto.scryptSync(pw, s, 64).toString('hex'); };
 export const check = (pw, h) => { const [s, k] = String(h).split(':'); if (!s || !k) return false; const d = crypto.scryptSync(pw, s, 64), e = Buffer.from(k, 'hex'); return d.length === e.length && crypto.timingSafeEqual(d, e); };
+export const fp = h => crypto.createHash('sha256').update(String(h)).digest('hex').slice(0, 16);
 export const same = (a, b) => { const x = crypto.createHash('sha256').update(String(a)).digest(), y = crypto.createHash('sha256').update(String(b)).digest(); return crypto.timingSafeEqual(x, y); };
 export const db = async () => { const { neon } = await import('@neondatabase/serverless'); return neon(process.env.DATABASE_URL); };
 export const user = req => { const o = verify(getCookie(req, 'cv_s')); return o && o.uid ? o : null; };
