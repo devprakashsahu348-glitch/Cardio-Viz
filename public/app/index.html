@@ -1,0 +1,55 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CardioViz demo: 3D coronary risk map</title><meta name="description" content="Interactive 3D heart with LAD, LCX and RCA coloured by predicted risk and explained with SHAP values.">
+<link rel="icon" href="/favicon.svg"><link rel="canonical" href="%SITE%/app/">
+<style>
+:root{--bg:#fbf4f2;--fg:#1c2430;--mut:#55606d;--line:#e6d3cf;--acc:#8c1d2c;--teal:#2b5d63;--card:#fff}
+@media(prefers-color-scheme:dark){:root{--bg:#12181e;--fg:#e8eef0;--mut:#a3afb8;--line:#2a343d;--acc:#e0636f;--teal:#7fc0c6;--card:#1a222a}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+.warn{background:var(--acc);color:#fff;padding:.6rem 1rem;font-size:.9rem}.warn a{color:#fff}
+.app{display:grid;grid-template-columns:1fr 420px;min-height:calc(100vh - 44px)}#cv{position:relative;min-height:420px;border-right:1px solid var(--line)}canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.hint{position:absolute;left:12px;bottom:6px;margin:0;color:var(--mut);font-size:.85rem}
+.side{padding:1rem;overflow:auto;max-height:calc(100vh - 44px)}h2{font:700 1.1rem Georgia,serif;margin:1rem 0 .5rem}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}.card{border:2px solid var(--line);background:var(--card);padding:.5rem .7rem;text-align:left;cursor:pointer;color:var(--fg);font:inherit;border-radius:3px}.card.on{border-color:var(--acc)}.card b{font-size:1.4rem;display:block}
+.row{display:grid;grid-template-columns:130px 1fr 54px;gap:.5rem;align-items:center;font-size:.85rem;margin:.25rem 0}.bar{height:12px;background:var(--line);position:relative}.bar i{position:absolute;top:0;bottom:0}
+.inp{display:grid;grid-template-columns:120px 1fr 62px;gap:.5rem;align-items:center;font-size:.85rem;margin:.3rem 0}input[type=range]{width:100%;accent-color:var(--acc)}
+.note{color:var(--mut);font-size:.82rem}a{color:var(--acc)}
+@media(max-width:860px){.app{grid-template-columns:1fr}#cv{height:360px;border-right:0}.side{max-height:none}}
+</style></head><body>
+<div class="warn"><strong>Clinical safety notice:</strong> for decision support and education only, not a diagnosis. This demo uses illustrative weights, not weights trained on patient data. <a href="/">Back to site</a></div>
+<div class="app"><div id="cv"><canvas id="c" aria-label="3D heart with coronary arteries coloured by predicted risk"></canvas><p class="hint">Drag to rotate. Click an artery to select it.</p></div>
+<div class="side"><div class="cards" id="cards"></div><h2 id="ttl"></h2><div id="shap"></div><h2>Inputs</h2><div id="inp"></div>
+<p class="note">Contributions are exact SHAP values for a linear model, in log-odds: w × (x − mean) / sd.</p></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const T=['CAD','LAD','LCX','RCA'],TL={CAD:'Overall CAD',LAD:'LAD',LCX:'LCX',RCA:'RCA'},B={CAD:-.2,LAD:-.6,LCX:-1.1,RCA:-.9};
+// name,min,max,step,mean,sd,default, weights CAD,LAD,LCX,RCA, unit
+const F=[['Age',30,90,1,58,10,58,.5,.35,.2,.25,'yr'],['Sex (1 = male)',0,1,1,.5,.5,1,.3,.2,.1,.2,''],['Systolic BP',90,200,1,130,18,130,.25,.15,.1,.1,'mmHg'],['Pulse rate',45,120,1,75,12,75,.05,.05,.05,.05,'bpm'],['Typical chest pain',0,1,1,.5,.5,0,.9,.6,.3,.4,''],['Diabetes',0,1,1,.3,.46,0,.4,.3,.2,.2,''],['Hypertension',0,1,1,.6,.49,0,.35,.25,.1,.15,''],['LDL',50,250,1,110,35,110,.25,.2,.1,.15,'mg/dL'],['HDL',20,90,1,40,10,40,-.3,-.2,-.1,-.15,'mg/dL'],['Triglycerides',50,400,1,150,80,150,.2,.1,.1,.1,'mg/dL'],['Fasting glucose',70,300,1,110,50,110,.25,.2,.15,.1,'mg/dL'],['ST elevation',0,1,1,.1,.3,0,.3,.4,.1,.1,''],['T inversion',0,1,1,.3,.46,0,.5,.4,.2,.2,''],['Ejection fraction',20,70,1,47,8,47,-.5,-.45,-.2,-.2,'%'],['Region with RWMA',0,4,1,.5,.9,0,.5,.45,.2,.3,''],['BMI',15,40,.5,27,4,27,.1,.05,.05,.05,'kg/m²']];
+const X=F.map(f=>f[6]);let sel='CAD';
+const phi=(t,j)=>F[j][7+T.indexOf(t)]*(X[j]-F[j][4])/F[j][5];
+const prob=t=>1/(1+Math.exp(-(B[t]+F.reduce((s,_,j)=>s+phi(t,j),0))));
+const $=id=>document.getElementById(id);
+function ui(){
+ $('cards').innerHTML=T.map(t=>`<button class="card ${t===sel?'on':''}" data-t="${t}"><span>${TL[t]}</span><b>${Math.round(prob(t)*100)}%</b></button>`).join('');
+ $('cards').querySelectorAll('button').forEach(b=>b.onclick=()=>{sel=b.dataset.t;ui()});
+ $('ttl').textContent='Why '+TL[sel]+' is '+Math.round(prob(sel)*100)+'%';
+ const r=F.map((f,j)=>[f[0],phi(sel,j),X[j],f[11]]).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])),m=Math.max(.5,...r.map(a=>Math.abs(a[1])));
+ $('shap').innerHTML=r.map(a=>`<div class="row"><span>${a[0]}</span><div class="bar"><i style="left:${a[1]<0?50-Math.abs(a[1])/m*50:50}%;width:${Math.abs(a[1])/m*50}%;background:${a[1]<0?'var(--teal)':'var(--acc)'}"></i></div><span>${a[1]>0?'+':''}${a[1].toFixed(2)}</span></div>`).join('');
+ paint()}
+$('inp').innerHTML=F.map((f,j)=>`<label class="inp"><span>${f[0]}</span><input type="range" min="${f[1]}" max="${f[2]}" step="${f[3]}" value="${f[6]}" data-j="${j}"><output>${f[6]} ${f[11]}</output></label>`).join('');
+$('inp').querySelectorAll('input').forEach(i=>i.oninput=()=>{const j=+i.dataset.j;X[j]=+i.value;i.nextSibling.textContent=i.value+' '+F[j][11];ui()});
+// 3D
+const cv=$('c'),R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});R.setPixelRatio(Math.min(devicePixelRatio,1.5));
+const S=new THREE.Scene(),C=new THREE.PerspectiveCamera(40,1,.1,50);C.position.set(0,0,5);
+S.add(new THREE.AmbientLight(0xffffff,.7));const L=new THREE.DirectionalLight(0xffffff,.8);L.position.set(3,4,5);S.add(L);
+const G=new THREE.Group();G.scale.set(1,1.15,.9);S.add(G);
+G.add(new THREE.Mesh(new THREE.SphereGeometry(1,28,20),new THREE.MeshStandardMaterial({color:0x6b2a33,roughness:.7,transparent:true,opacity:.92})));
+const P={LAD:[[0,.9,.5],[.25,.5,.9],[.3,0,.98],[.2,-.6,.8],[.05,-1,.4]],LCX:[[0,.9,.5],[-.5,.75,.5],[-.8,.4,.5],[-.95,-.2,.2],[-.7,-.7,.2]],RCA:[[0,.95,.4],[.6,.8,.5],[.9,.3,.6],[.95,-.3,.4],[.7,-.8,.3]]},M={};
+Object.entries(P).forEach(([t,p])=>{const m=new THREE.MeshStandardMaterial({roughness:.4}),mesh=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(p.map(v=>new THREE.Vector3(...v).multiplyScalar(1.04))),40,.07,8),m);mesh.userData.t=t;G.add(mesh);M[t]=mesh});
+function paint(){T.slice(1).forEach(t=>{const c=new THREE.Color().setHSL(120*(1-prob(t))/360,.75,.45);M[t].material.color=c;M[t].material.emissive=t===sel?c.clone().multiplyScalar(.5):new THREE.Color(0)})}
+function size(){const b=cv.parentElement;R.setSize(b.clientWidth,b.clientHeight,false);C.aspect=b.clientWidth/b.clientHeight;C.updateProjectionMatrix()}
+addEventListener('resize',size);size();
+let d=null;cv.onpointerdown=e=>{d={x:e.clientX,y:e.clientY,m:0};cv.setPointerCapture(e.pointerId)};
+cv.onpointermove=e=>{if(!d)return;G.rotation.y+=(e.clientX-d.x)*.01;G.rotation.x=Math.max(-1,Math.min(1,G.rotation.x+(e.clientY-d.y)*.01));d.m+=Math.abs(e.clientX-d.x)+Math.abs(e.clientY-d.y);d.x=e.clientX;d.y=e.clientY};
+cv.onpointerup=e=>{if(d&&d.m<6){const b=cv.getBoundingClientRect(),rc=new THREE.Raycaster();rc.setFromCamera(new THREE.Vector2((e.clientX-b.left)/b.width*2-1,-(e.clientY-b.top)/b.height*2+1),C);const h=rc.intersectObjects(Object.values(M))[0];if(h){sel=h.object.userData.t;ui()}}d=null};
+(function loop(){R.render(S,C);requestAnimationFrame(loop)})();ui();
+</script></body></html>

@@ -1,0 +1,49 @@
+<!--title:CardioViz: coronary artery risk on an interactive 3D heart-->
+<!--desc:Predict coronary artery disease and LAD, LCX and RCA stenosis from clinical data, see each artery coloured by risk on a 3D heart, and read exactly why with SHAP.-->
+<section class="hero"><div class="wrap">
+ <h1>See which coronary artery is at risk, and why.</h1>
+ <p class="lead">CardioViz turns 16 routine clinical inputs into a risk estimate for overall coronary artery disease and for the three main vessels, then colours each artery on a rotating 3D heart.</p>
+ <svg class="ecg" viewBox="0 0 800 120" role="img" aria-label="An ECG trace"><path d="M0 70H190l14-12 14 12h40l12 8 16-62 20 92 14-38h60l16-16 16 16h70l14-10 14 10H800" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+ <p><a class="btn" href="%DEMO%">Open the demo</a> <a class="btn ghost" href="#how">How it works</a></p>
+</div></section>
+<section id="how"><div class="wrap">
+ <h2>How it works</h2>
+ <ol class="steps">
+  <li><strong>Enter clinical data.</strong> Age, sex, blood pressure, pulse, chest pain type, diabetes, hypertension, LDL, HDL, triglycerides, fasting glucose, ST elevation, T inversion, ejection fraction, region with RWMA and BMI.</li>
+  <li><strong>Four models predict.</strong> One regularised logistic regression each for overall CAD, LAD, LCX and RCA. Catheterisation results are never used as inputs.</li>
+  <li><strong>The heart shows the result.</strong> Each artery turns from green (low) to red (high) by predicted probability. Click an artery to select it.</li>
+  <li><strong>SHAP bars explain it.</strong> A linear model gives exact contributions in log-odds, so every input shows how much it pushed the risk up or down.</li>
+ </ol>
+ <div class="grid">
+  <div class="panel"><svg class="ico" width="28" height="28"><use href="#i-heart"/></svg><h3>3D coronary map</h3><p>Rotate, zoom and select. Built for ordinary laptops and phones with no dedicated GPU.</p></div>
+  <div class="panel"><svg class="ico" width="28" height="28"><use href="#i-search"/></svg><h3>Explained results</h3><p>Per-input SHAP contributions for each target, shown with the measured values.</p></div>
+  <div class="panel"><svg class="ico" width="28" height="28"><use href="#i-copy"/></svg><h3>Open source</h3><p>MIT-licensed code you can run yourself.</p></div>
+ </div>
+ <pre class="cmd"><code>git clone https://github.com/devprakashsahu348-glitch/Cardio-Viz.git</code><button type="button" data-copy="git clone https://github.com/devprakashsahu348-glitch/Cardio-Viz.git" aria-label="Copy clone command">Copy</button></pre>
+</div></section>
+<section id="safety" class="alt"><div class="wrap">
+ <h2>Safety and limits</h2>
+ <p class="notice"><strong>Clinical safety notice.</strong> Predictions are for decision support and education only. They are not a diagnosis and do not replace diagnostic imaging or a clinician's judgement.</p>
+ <p>The model is trained on the Z-Alizadeh Sani dataset (UCI Machine Learning Repository): a small, single-centre cohort with no external validation. The heart and arteries are schematic, not patient-specific anatomy. Region with RWMA is a clinical input, not a lesion map.</p>
+</div></section>
+<section id="faq"><div class="wrap">
+ <h2>Frequently asked questions</h2>
+ <details><summary>Is CardioViz a medical device?</summary><p>No. It is a research prototype and must not be used to diagnose, treat or rule out any condition.</p></details>
+ <details><summary>Does the demo send my inputs anywhere?</summary><p>No. Prediction and training run in your browser. Only the contact form on this site sends data to a server.</p></details>
+ <details><summary>Is it free?</summary><p>Yes. Using CardioViz costs nothing. See the <a href="/terms">terms</a> for how any future paid features would work.</p></details>
+ <details><summary>Can I use my own dataset?</summary><p>Yes. Load a CSV with the required columns in the demo, or run the Python training script from the repository.</p></details>
+ <details><summary>How do I report a problem?</summary><p>Use the form below or email devprakashsahu348@gmail.com.</p></details>
+</div></section>
+<section id="contact" class="alt"><div class="wrap">
+ <h2>Contact</h2>
+ <p>Questions, bug reports or collaboration: write to <a href="mailto:%EMAIL%">%EMAIL%</a> or use this form.</p>
+ <form class="contact" id="cf" novalidate>
+  <label>Name<input name="name" required minlength="2" maxlength="120" autocomplete="name"></label>
+  <label>Email<input name="email" type="email" required maxlength="200" autocomplete="email"></label>
+  <label>Message<textarea name="message" rows="5" required minlength="10" maxlength="4000"></textarea></label>
+  <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+  <label class="check"><input type="checkbox" name="consent" required> I agree that my details are stored to answer this message, as described in the privacy policy.</label>
+  <button class="btn" id="cf-btn" type="submit">Send message</button>
+  <div id="cf-msg" class="msg" role="status" tabindex="-1"></div>
+ </form>
+</div></section>

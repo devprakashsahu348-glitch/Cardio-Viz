@@ -1,0 +1,11 @@
+# CardioViz
+
+> Research prototype that predicts coronary artery disease and stenosis of the LAD, LCX and RCA vessels from 16 clinical inputs, shows the result on an interactive 3D heart, and explains each prediction with exact SHAP values. Not a medical device.
+
+- [Home](%SITE%/): overview, how it works, FAQ, contact
+- [Terms and conditions](%SITE%/terms)
+- [Privacy policy](%SITE%/privacy)
+- [Cookie policy](%SITE%/cookies)
+- Source code: https://github.com/devprakashsahu348-glitch/Cardio-Viz
+- Contact: %EMAIL%
+- Owner: %OWNER%
