@@ -72,6 +72,8 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: 'Unknown action.' });
   } catch (e) {
     if (e && e.code === '23505') return res.status(409).json({ error: 'An account with this email already exists. Log in instead.' });
-    console.error('auth failed'); return res.status(500).json({ error: 'Something went wrong. Try again.' });
+    console.error('auth failed', a, e && e.code, e && String(e.message).slice(0, 200));
+    if (e && e.code === '42P01') return res.status(500).json({ error: 'The database is not set up yet. Run schema.sql in the Neon SQL Editor.' });
+    return res.status(500).json({ error: 'Something went wrong. Try again.' });
   }
 }

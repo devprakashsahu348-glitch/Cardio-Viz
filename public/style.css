@@ -54,3 +54,4 @@ dialog{border:1px solid var(--line);background:var(--card);color:var(--fg);borde
 .pw{position:relative}.pw input{padding-right:4.2rem}.eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--acc);font:600 .85rem inherit;cursor:pointer;padding:.4rem .5rem}
 .rules{list-style:none;margin:-.4rem 0 0;padding:0;font-size:.85rem;color:var(--mut);display:grid;grid-template-columns:1fr 1fr;gap:.15rem .8rem}.rules li::before{content:"\25CB  "}.rules li.ok{color:#2f7d3b}.rules li.ok::before{content:"\2713  "}
 [data-theme=dark] .rules li.ok{color:#7fd48a}
+nav#nav a.btn{color:#fff}[data-theme=dark] nav#nav a.btn{color:#12181e}

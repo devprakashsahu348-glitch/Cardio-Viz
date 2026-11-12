@@ -4,7 +4,7 @@ const site = (E.SITE_URL || (E.VERCEL_PROJECT_PRODUCTION_URL ? 'https://' + E.VE
 const d = new Date();
 const V = { SITE: site, EMAIL: 'devprakashsahu348@gmail.com', OWNER: 'Dev Prakash Sahu', GA: E.GA_ID || '',
   WA: (E.WHATSAPP_NUMBER || '').replace(/\D/g, ''), DEMO: E.DEMO_URL || '/app/',
-  DATE: d.toISOString().slice(0, 10), LONGDATE: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), YEAR: d.getFullYear() };
+  DATE: d.toISOString().slice(0, 10), LONGDATE: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), YEAR: d.getFullYear(), BUILD: String(Date.now()) };
 const fill = s => s.replace(/%([A-Z]+)%/g, (m, k) => (k in V ? V[k] : m));
 fs.rmSync(O, { recursive: true, force: true });
 const copy = (a, b) => { fs.mkdirSync(b, { recursive: true });
