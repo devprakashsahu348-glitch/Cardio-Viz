@@ -1,0 +1,16 @@
+<!--title:Admin | CardioViz-->
+<!--desc:Private admin area.-->
+<!--crumb:Admin-->
+<section><div class="wrap"><h1 style="max-width:none">Admin</h1>
+<form class="contact" id="al"><label>Admin password<input name="password" type="password" required autocomplete="current-password"></label><button class="btn" type="submit">Log in</button></form>
+<div id="ad" hidden><p id="st"></p><p><button class="link" id="lo">Log out</button></p><h2>Contact messages</h2>
+<div style="overflow-x:auto"><table><thead><tr><th>Received</th><th>Name</th><th>Email</th><th>Message</th><th>Campaign</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+<div id="am" class="msg" role="status"></div></div></section>
+<script>
+(()=>{const $=id=>document.getElementById(id);
+async function show(){const r=await fetch('/api/admin'),d=await r.json().catch(()=>({}));if(!r.ok){$('al').hidden=false;$('ad').hidden=true;return r.status!==401&&($('am').className='msg err',$('am').textContent=d.error||'Error')}
+ $('al').hidden=true;$('ad').hidden=false;$('st').textContent=d.stats.users+' users, '+d.stats.predictions+' saved predictions, '+d.messages.length+' recent messages';$('rows').innerHTML='';
+ d.messages.forEach(m=>{const tr=document.createElement('tr');[new Date(m.created_at).toLocaleString(),m.name,m.email,m.message,Object.entries(m.utm||{}).map(e=>e.join('=')).join(', ')].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.appendChild(td)});$('rows').appendChild(tr)})}
+$('al').onsubmit=async e=>{e.preventDefault();const r=await fetch('/api/admin?a=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData($('al'))))}),d=await r.json().catch(()=>({}));if(r.ok){$('am').className='msg';$('al').reset();show()}else{$('am').className='msg err';$('am').textContent=d.error||'Error'}};
+$('lo').onclick=async()=>{await fetch('/api/admin?a=logout',{method:'POST'});show()};show()})();
+</script>

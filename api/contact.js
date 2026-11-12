@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { mail } from './_lib.js';
 
 const bad = (res, msg) => res.status(400).json({ error: msg });
 
@@ -20,6 +21,8 @@ export default async function handler(req, res) {
     const sql = neon(process.env.DATABASE_URL);
     await sql`INSERT INTO contact_messages (name, email, message, utm, page)
               VALUES (${name}, ${email}, ${message}, ${JSON.stringify(b.utm || {})}::jsonb, ${String(b.page || '').slice(0, 200)})`;
+    await mail(email, 'We received your message', `Hi ${name},\n\nThanks for writing to CardioViz. We have your message and will reply to this address.\n\nCardioViz`);
+    await mail(process.env.NOTIFY_EMAIL || 'devprakashsahu348@gmail.com', 'New CardioViz message', `${name} <${email}>\n\n${message}`);
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error('contact insert failed');

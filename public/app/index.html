@@ -17,7 +17,7 @@
 </style></head><body>
 <div class="warn"><strong>Clinical safety notice:</strong> for decision support and education only, not a diagnosis. This demo uses illustrative weights, not weights trained on patient data. <a href="/">Back to site</a></div>
 <div class="app"><div id="cv"><canvas id="c" aria-label="3D heart with coronary arteries coloured by predicted risk"></canvas><p class="hint">Drag to rotate. Click an artery to select it.</p></div>
-<div class="side"><div class="cards" id="cards"></div><h2 id="ttl"></h2><div id="shap"></div><h2>Inputs</h2><div id="inp"></div>
+<div class="side"><div class="cards" id="cards"></div><p><button class="card" id="save" type="button">Save this prediction</button> <span id="sv" class="note"></span></p><h2 id="ttl"></h2><div id="shap"></div><h2>Inputs</h2><div id="inp"></div>
 <p class="note">Contributions are exact SHAP values for a linear model, in log-odds: w × (x − mean) / sd.</p></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -51,5 +51,6 @@ addEventListener('resize',size);size();
 let d=null;cv.onpointerdown=e=>{d={x:e.clientX,y:e.clientY,m:0};cv.setPointerCapture(e.pointerId)};
 cv.onpointermove=e=>{if(!d)return;G.rotation.y+=(e.clientX-d.x)*.01;G.rotation.x=Math.max(-1,Math.min(1,G.rotation.x+(e.clientY-d.y)*.01));d.m+=Math.abs(e.clientX-d.x)+Math.abs(e.clientY-d.y);d.x=e.clientX;d.y=e.clientY};
 cv.onpointerup=e=>{if(d&&d.m<6){const b=cv.getBoundingClientRect(),rc=new THREE.Raycaster();rc.setFromCamera(new THREE.Vector2((e.clientX-b.left)/b.width*2-1,-(e.clientY-b.top)/b.height*2+1),C);const h=rc.intersectObjects(Object.values(M))[0];if(h){sel=h.object.userData.t;ui()}}d=null};
+$('save').onclick=async()=>{$('sv').textContent='Saving...';try{const r=await fetch('/api/predictions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inputs:X,probs:Object.fromEntries(T.map(t=>[t,+prob(t).toFixed(4)]))})});$('sv').innerHTML=r.ok?'Saved. See <a href="/account">your history</a>.':r.status===401?'<a href="/account">Log in</a> to save predictions.':'Could not save. Try again.'}catch(e){$('sv').textContent='Could not save. Check your connection.'}};
 (function loop(){R.render(S,C);requestAnimationFrame(loop)})();ui();
 </script></body></html>

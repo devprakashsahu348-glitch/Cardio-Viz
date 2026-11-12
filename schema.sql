@@ -1,9 +1,10 @@
 CREATE TABLE IF NOT EXISTS contact_messages (
-  id         BIGSERIAL PRIMARY KEY,
-  name       TEXT NOT NULL,
-  email      TEXT NOT NULL,
-  message    TEXT NOT NULL,
-  utm        JSONB NOT NULL DEFAULT '{}',
-  page       TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+  id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, message TEXT NOT NULL,
+  utm JSONB NOT NULL DEFAULT '{}', page TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS users (
+  id BIGSERIAL PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL, pw_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS predictions (
+  id BIGSERIAL PRIMARY KEY, user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  inputs JSONB NOT NULL, probs JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS predictions_user_idx ON predictions (user_id, created_at DESC);

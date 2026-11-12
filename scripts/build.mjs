@@ -20,7 +20,7 @@ for (const f of fs.readdirSync(P).filter(x => x.endsWith('.html'))) {
   const raw = fs.readFileSync(path.join(P, f), 'utf8');
   const m = k => (raw.match(new RegExp('<!--' + k + ':(.*?)-->', 's')) || [, ''])[1].trim();
   const slug = f === 'index.html' ? '' : f.replace('.html', '');
-  const robots = slug === '404' ? 'noindex' : 'index,follow';
+  const robots = ['404', 'account', 'admin'].includes(slug) ? 'noindex' : 'index,follow';
   const crumb = slug && slug !== '404' ? `<nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> / <span aria-current="page">${m('crumb')}</span></nav>` : '';
   const body = raw.replace(/<!--[a-z]+:.*?-->/gs, '');
   const out = fill(layout.replace('{{content}}', () => crumb + body).replace(/{{title}}/g, m('title')).replace(/{{desc}}/g, m('desc'))

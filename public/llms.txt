@@ -6,6 +6,5 @@
 - [Terms and conditions](%SITE%/terms)
 - [Privacy policy](%SITE%/privacy)
 - [Cookie policy](%SITE%/cookies)
-- Source code: https://github.com/devprakashsahu348-glitch/Cardio-Viz
 - Contact: %EMAIL%
 - Owner: %OWNER%

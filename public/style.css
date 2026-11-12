@@ -46,3 +46,4 @@ dialog{border:1px solid var(--line);background:var(--card);color:var(--fg);borde
 @media(max-width:780px){#menu{display:block}nav#nav{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:flex-start;background:var(--bg);padding:1rem 1.2rem;border-bottom:1px solid var(--line)}nav#nav.open{display:flex}.tools{margin-left:auto}.cookie{right:12px;bottom:84px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}.ecg path{stroke-dashoffset:0}}
 @media print{header.site,footer .cols,.float,.top,.cookie,#bar,.hero{display:none!important}body{background:#fff;color:#000;font-size:12pt}a{color:#000}a[href^=http]::after{content:" (" attr(href) ")"}}
+[hidden]{display:none!important}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid var(--line);padding:.5rem;text-align:left;font-size:.92rem;vertical-align:top}

@@ -1,0 +1,40 @@
+<!--title:Your account | CardioViz-->
+<!--desc:Log in or create an account to save CardioViz predictions and review your history.-->
+<!--crumb:Account-->
+<section><div class="wrap">
+<h1 style="max-width:none">Your account</h1>
+<div id="in" hidden>
+ <div class="grid">
+  <form class="contact" id="fl" data-a="login"><h2>Log in</h2>
+   <label>Email<input name="email" type="email" required autocomplete="email"></label>
+   <label>Password<input name="password" type="password" required autocomplete="current-password"></label>
+   <button class="btn" type="submit">Log in</button></form>
+  <form class="contact" id="fr" data-a="register"><h2>Create account</h2>
+   <label>Name<input name="name" required minlength="2" autocomplete="name"></label>
+   <label>Email<input name="email" type="email" required autocomplete="email"></label>
+   <label>Password (8+ characters)<input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
+   <label class="check"><input type="checkbox" name="consent" required> I agree to the <a href="/terms">terms</a> and the <a href="/privacy">privacy policy</a>. Predictions are stored only when I press Save.</label>
+   <button class="btn" type="submit">Create account</button></form>
+ </div>
+</div>
+<div id="out" hidden>
+ <p>Signed in as <strong id="who"></strong>. <button class="link" id="lo">Log out</button></p>
+ <h2>Saved predictions</h2>
+ <p id="none">Nothing saved yet. Open the <a href="%DEMO%">demo</a> and press Save this prediction.</p>
+ <div style="overflow-x:auto"><table><thead><tr><th>Saved</th><th>CAD</th><th>LAD</th><th>LCX</th><th>RCA</th><th></th></tr></thead><tbody id="hist"></tbody></table></div>
+ <p><button class="btn ghost small" id="da">Delete my account and all saved data</button></p>
+</div>
+<div id="am" class="msg" role="status"></div>
+</div></section>
+<script>
+(()=>{const $=id=>document.getElementById(id),say=(t,c)=>{const m=$('am');m.className='msg '+c;m.textContent=t},
+j=async(u,o,m)=>{const r=await fetch(u,o!==undefined||m?{method:m||'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o||{})}:undefined);return{ok:r.ok,d:await r.json().catch(()=>({}))}};
+async function load(){const{d}=await j('/api/auth?a=me');$('in').hidden=!!d.user;$('out').hidden=!d.user;if(!d.user)return;
+ $('who').textContent=d.user.name+' ('+d.user.email+')';const h=await j('/api/predictions'),rows=h.d.items||[];$('hist').innerHTML='';
+ rows.forEach(r=>{const tr=document.createElement('tr'),p=r.probs||{};tr.innerHTML='<td></td>'+['CAD','LAD','LCX','RCA'].map(t=>'<td>'+Math.round((+p[t]||0)*100)+'%</td>').join('')+'<td><button class="link">Delete</button></td>';
+  tr.firstChild.textContent=new Date(r.created_at).toLocaleString();tr.querySelector('button').onclick=async()=>{if(confirm('Delete this saved prediction?')){await j('/api/predictions?id='+r.id,{},'DELETE');load()}};$('hist').appendChild(tr)});$('none').hidden=rows.length>0}
+for(const f of [$('fl'),$('fr')])f.onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f));d.consent=!!d.consent;const r=await j('/api/auth?a='+f.dataset.a,d);r.ok?(say('','' ),f.reset(),load()):say(r.d.error||'Something went wrong.','err')};
+$('lo').onclick=async()=>{await j('/api/auth?a=logout',{});load()};
+$('da').onclick=async()=>{if(confirm('Delete your account and every saved prediction? This cannot be undone.')){await j('/api/auth?a=delete',{});say('Your account and data were deleted.','ok');load()}};
+load()})();
+</script>
