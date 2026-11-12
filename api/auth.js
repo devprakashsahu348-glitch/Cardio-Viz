@@ -1,72 +1,73 @@
 import crypto from 'node:crypto';
-import { body, db, sign, setCookie, hash, check, same, user, ready, mail, mailOn } from './_lib.js';
+import { body, db, sign, setCookie, hash, check, user, ready, mail, mailOn } from './_lib.js';
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/, AGE = 14 * 86400;
-const dig = (email, purpose, code) => crypto.createHash('sha256').update(`${process.env.AUTH_SECRET}|${email}|${purpose}|${code}`).digest('hex');
-async function sendOtp(sql, email, name, purpose) {
-  const recent = await sql`SELECT 1 FROM otps WHERE email = ${email} AND purpose = ${purpose} AND created_at > now() - interval '60 seconds'`;
-  if (recent.length) return false;
-  const code = String(crypto.randomInt(100000, 1000000));
-  await sql`INSERT INTO otps (email, purpose, code_hash, expires_at) VALUES (${email}, ${purpose}, ${dig(email, purpose, code)}, now() + interval '10 minutes')
-            ON CONFLICT (email, purpose) DO UPDATE SET code_hash = EXCLUDED.code_hash, expires_at = EXCLUDED.expires_at, attempts = 0, created_at = now()`;
-  await mail(email, purpose === 'reset' ? 'Your CardioViz password reset code' : 'Your CardioViz verification code',
-    `Hi ${name},\n\nYour code is ${code}\n\nIt works for 10 minutes. If you did not ask for it, ignore this email.\n\nCardioViz`);
-  return true;
-}
-async function checkOtp(sql, email, purpose, code) {
-  const r = await sql`SELECT code_hash, attempts FROM otps WHERE email = ${email} AND purpose = ${purpose} AND expires_at > now()`;
-  if (!r.length || r[0].attempts >= 5) return false;
-  if (!same(r[0].code_hash, dig(email, purpose, String(code || '').trim()))) {
-    await sql`UPDATE otps SET attempts = attempts + 1 WHERE email = ${email} AND purpose = ${purpose}`; return false;
-  }
-  await sql`DELETE FROM otps WHERE email = ${email} AND purpose = ${purpose}`; return true;
-}
+const strong = p => p.length >= 8 && Buffer.byteLength(p) <= 72 && /[a-z]/.test(p) && /[A-Z]/.test(p) && /\d/.test(p);
+const PWMSG = 'Password must be 8 to 72 characters with an uppercase letter, a lowercase letter and a number.';
+const ipOf = req => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+const sha = s => crypto.createHash('sha256').update(s).digest('hex');
+const base = req => (process.env.SITE_URL || `https://${req.headers.host}`).replace(/\/$/, '');
+const tooMany = async (sql, kind, key, max, mins) => (await sql`SELECT count(*)::int AS n FROM attempts WHERE kind = ${kind} AND k = ${key} AND created_at > now() - make_interval(mins => ${mins}::int)`)[0].n >= max;
+const hit = (sql, kind, key) => sql`INSERT INTO attempts (kind, k) VALUES (${kind}, ${key})`;
+let dummy;
 export default async function handler(req, res) {
   const a = req.query.a || 'me';
   if (a === 'logout') { setCookie(res, 'cv_s', '', 0); return res.json({ ok: true }); }
   if (a === 'me') { const u = user(req); return res.json({ user: u ? { email: u.email, name: u.name } : null }); }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' });
   if (!ready(res, 'AUTH_SECRET', 'DATABASE_URL')) return;
-  const sql = await db(), b = body(req), email = String(b.email || '').trim().toLowerCase().slice(0, 200), pw = String(b.password || '');
-  const BAD = 'That code is wrong or has expired. Request a new one.';
+  const sql = await db(), b = body(req), ip = ipOf(req), pw = String(b.password || '');
+  const email = String(b.email || '').trim().toLowerCase().slice(0, 200);
   try {
     if (a === 'delete') {
       const u = user(req); if (!u) return res.status(401).json({ error: 'Log in first.' });
       await sql`DELETE FROM users WHERE id = ${u.uid}`; setCookie(res, 'cv_s', '', 0); return res.json({ ok: true });
     }
-    if (!EMAIL.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
-    if (a === 'verify') {
-      if (!(await checkOtp(sql, email, 'verify', b.code))) return res.status(400).json({ error: BAD });
-      const r = await sql`UPDATE users SET email_verified = true WHERE email = ${email} RETURNING id, name`;
-      if (!r.length) return res.status(400).json({ error: BAD });
+    if (a === 'register') {
+      const name = String(b.name || '').trim().slice(0, 100);
+      if (name.length < 2) return res.status(400).json({ error: 'Enter your full name.' });
+      if (!EMAIL.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
+      if (!strong(pw)) return res.status(400).json({ error: PWMSG });
+      if (pw !== String(b.confirm || '')) return res.status(400).json({ error: 'The two passwords do not match.' });
+      if (!b.consent) return res.status(400).json({ error: 'Tick the box to accept the terms and privacy policy.' });
+      if (await tooMany(sql, 'signup', ip, 10, 60)) return res.status(429).json({ error: 'Too many sign-ups from this network. Try again later.' });
+      await hit(sql, 'signup', ip);
+      await sql`INSERT INTO users (email, name, pw_hash) VALUES (${email}, ${name}, ${await hash(pw)})`;
+      return res.json({ ok: true });
+    }
+    if (a === 'login') {
+      if (!EMAIL.test(email) || !pw) return res.status(400).json({ error: 'Enter your email and password.' });
+      if ((await tooMany(sql, 'login', email, 5, 15)) || (await tooMany(sql, 'loginip', ip, 30, 15))) return res.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' });
+      const r = await sql`SELECT id, name, pw_hash FROM users WHERE email = ${email}`;
+      dummy ||= await hash('not-a-real-password');
+      const ok = await check(pw, r.length ? r[0].pw_hash : dummy);
+      if (!r.length || !ok) { await hit(sql, 'login', email); await hit(sql, 'loginip', ip); return res.status(401).json({ error: 'Wrong email or password.' }); }
+      await sql`DELETE FROM attempts WHERE kind = 'login' AND k = ${email}`;
       setCookie(res, 'cv_s', sign({ uid: r[0].id, email, name: r[0].name }), AGE); return res.json({ ok: true });
     }
-    if (a === 'reset') {
-      if (pw.length < 8 || pw.length > 200) return res.status(400).json({ error: 'Use a password of at least 8 characters.' });
-      if (!(await checkOtp(sql, email, 'reset', b.code))) return res.status(400).json({ error: BAD });
-      await sql`UPDATE users SET pw_hash = ${hash(pw)}, email_verified = true WHERE email = ${email}`; return res.json({ ok: true });
-    }
-    if (a === 'forgot' || a === 'resend') {
-      if (!mailOn()) return res.status(503).json({ error: 'Email codes are not available yet.' });
-      const r = await sql`SELECT name, email_verified FROM users WHERE email = ${email}`;
-      if (r.length && (a === 'forgot' || !r[0].email_verified)) {
-        if (!(await sendOtp(sql, email, r[0].name, a === 'forgot' ? 'reset' : 'verify'))) return res.status(429).json({ error: 'Wait a minute before asking for another code.' });
+    if (a === 'forgot') {
+      if (!EMAIL.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
+      if (!mailOn()) return res.status(503).json({ error: 'Password reset email is not available yet.' });
+      if ((await tooMany(sql, 'forgot', email, 3, 60)) || (await tooMany(sql, 'forgotip', ip, 10, 60))) return res.status(429).json({ error: 'Too many requests. Try again in an hour.' });
+      await hit(sql, 'forgot', email); await hit(sql, 'forgotip', ip);
+      const r = await sql`SELECT id, name FROM users WHERE email = ${email}`;
+      if (r.length) {
+        const token = crypto.randomBytes(32).toString('hex');
+        await sql`DELETE FROM reset_tokens WHERE user_id = ${r[0].id}`;
+        await sql`INSERT INTO reset_tokens (token_hash, user_id, expires_at) VALUES (${sha(token)}, ${r[0].id}, now() + interval '30 minutes')`;
+        await mail(email, 'Reset your CardioViz password', `Hi ${r[0].name},\n\nChoose a new password with this link:\n${base(req)}/reset#t=${token}\n\nThe link works for 30 minutes and only once. If you did not ask for this, ignore this email; your password is unchanged.\n\nCardioViz`);
       }
       return res.json({ ok: true });
     }
-    if (a === 'register') {
-      const name = String(b.name || '').trim().slice(0, 100);
-      if (name.length < 2) return res.status(400).json({ error: 'Enter your name.' });
-      if (pw.length < 8 || pw.length > 200) return res.status(400).json({ error: 'Use a password of at least 8 characters.' });
-      if (!b.consent) return res.status(400).json({ error: 'Tick the consent box to create an account.' });
-      const r = await sql`INSERT INTO users (email, name, pw_hash, email_verified) VALUES (${email}, ${name}, ${hash(pw)}, ${!mailOn()}) RETURNING id`;
-      if (mailOn()) { await sendOtp(sql, email, name, 'verify'); return res.json({ ok: true, verify: true }); }
-      setCookie(res, 'cv_s', sign({ uid: r[0].id, email, name }), AGE); return res.json({ ok: true });
-    }
-    if (a === 'login') {
-      const r = await sql`SELECT id, name, pw_hash, email_verified FROM users WHERE email = ${email}`;
-      if (!r.length || !check(pw, r[0].pw_hash)) return res.status(401).json({ error: 'Wrong email or password.' });
-      if (!r[0].email_verified) return res.status(403).json({ error: 'Verify your email first. Use "Resend verification code" below.' });
-      setCookie(res, 'cv_s', sign({ uid: r[0].id, email, name: r[0].name }), AGE); return res.json({ ok: true });
+    if (a === 'reset') {
+      if (!strong(pw)) return res.status(400).json({ error: PWMSG });
+      if (pw !== String(b.confirm || '')) return res.status(400).json({ error: 'The two passwords do not match.' });
+      const t = String(b.token || '');
+      if (!/^[a-f0-9]{64}$/.test(t)) return res.status(400).json({ error: 'This reset link is invalid.' });
+      const r = await sql`UPDATE reset_tokens SET used_at = now() WHERE token_hash = ${sha(t)} AND used_at IS NULL AND expires_at > now() RETURNING user_id`;
+      if (!r.length) return res.status(400).json({ error: 'This reset link is invalid, expired or already used. Request a new one.' });
+      await sql`UPDATE users SET pw_hash = ${await hash(pw)} WHERE id = ${r[0].user_id}`;
+      await sql`DELETE FROM reset_tokens WHERE user_id = ${r[0].user_id}`;
+      return res.json({ ok: true });
     }
     return res.status(404).json({ error: 'Unknown action.' });
   } catch (e) {

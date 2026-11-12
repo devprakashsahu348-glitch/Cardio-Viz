@@ -1,0 +1,24 @@
+<!--title:Dashboard | CardioViz-->
+<!--desc:Your saved CardioViz predictions.-->
+<!--crumb:Dashboard-->
+<section><div class="wrap">
+<h1 style="max-width:none">Dashboard</h1>
+<p>Signed in as <strong id="who">...</strong>. <button class="link" id="lo">Log out</button></p>
+<p><a class="btn" href="%DEMO%">Open the demo</a></p>
+<h2>Saved predictions</h2>
+<p id="none" hidden>Nothing saved yet. Open the demo and press Save this prediction.</p>
+<div style="overflow-x:auto"><table><thead><tr><th>Saved</th><th>CAD</th><th>LAD</th><th>LCX</th><th>RCA</th><th></th></tr></thead><tbody id="hist"></tbody></table></div>
+<p><button class="btn ghost small" id="da">Delete my account and all saved data</button></p>
+<div id="am" class="msg" role="status"></div>
+</div></section>
+<script>
+(()=>{const $=id=>document.getElementById(id),say=(t,c)=>{const m=$('am');m.className='msg '+c;m.textContent=t},
+j=async(u,m)=>{const r=await fetch(u,m?{method:m,headers:{'Content-Type':'application/json'},body:'{}'}:undefined);return{ok:r.ok,s:r.status,d:await r.json().catch(()=>({}))}};
+async function load(){const{d}=await j('/api/auth?a=me');if(!d.user)return location.replace('/login?next=/dashboard');
+ $('who').textContent=d.user.name+' ('+d.user.email+')';const h=await j('/api/predictions'),rows=h.d.items||[];$('hist').innerHTML='';
+ rows.forEach(r=>{const tr=document.createElement('tr'),p=r.probs||{};tr.innerHTML='<td></td>'+['CAD','LAD','LCX','RCA'].map(t=>'<td>'+Math.round((+p[t]||0)*100)+'%</td>').join('')+'<td><button class="link">Delete</button></td>';
+  tr.firstChild.textContent=new Date(r.created_at).toLocaleString();tr.querySelector('button').onclick=async()=>{if(confirm('Delete this saved prediction?')){await j('/api/predictions?id='+r.id,'DELETE');load()}};$('hist').appendChild(tr)});$('none').hidden=rows.length>0}
+$('lo').onclick=async()=>{await j('/api/auth?a=logout','POST');location.href='/login'};
+$('da').onclick=async()=>{if(confirm('Delete your account and every saved prediction? This cannot be undone.')){await j('/api/auth?a=delete','POST');location.href='/'}};
+load()})();
+</script>

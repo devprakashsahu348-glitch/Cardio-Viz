@@ -5,6 +5,6 @@
 3. vercel.com: Add New > Project > import the repo, framework Other.
 4. Environment Variables (see `.env.example`). Required: `DATABASE_URL`, `AUTH_SECRET` (long random text), `ADMIN_PASSWORD`.
    For emails: `GMAIL_USER`, `GMAIL_APP_PASSWORD`. Optional: `NOTIFY_EMAIL`, `SITE_URL`, `GA_ID`, `WHATSAPP_NUMBER`.
-5. Deploy, then test: sign up at `/account`, save a prediction in `/app/`, send the contact form, open `/admin`.
-6. Emails (verification and reset codes): in your Google Account turn on 2-Step Verification, then create an App Password (Security > 2-Step Verification > App passwords). Without the two Gmail variables accounts are verified automatically and password reset is unavailable.
+5. Deploy, then test: `/signup`, `/login`, `/forgot` (needs the Gmail variables), the reset link, `/dashboard`, the Save button in `/app/`, the contact form and `/admin`.
+6. Reset emails: in your Google Account turn on 2-Step Verification, then create an App Password. Without the two Gmail variables, "Forgot password" cannot send emails.
 7. Never commit `.env`. Redeploy after changing any variable.

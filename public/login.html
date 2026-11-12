@@ -1,0 +1,13 @@
+<!--title:Log in | CardioViz-->
+<!--desc:Log in to your CardioViz account to save and review predictions.-->
+<!--crumb:Log in-->
+<section class="auth"><div class="authcard">
+<h1>Welcome back</h1><p class="sub">Log in to see your saved predictions.</p>
+<div id="msg" class="msg" role="status" aria-live="polite"></div>
+<form class="contact" data-form="login" novalidate>
+<label>Email address<input name="email" type="email" required autocomplete="email"></label>
+<label>Password<div class="pw"><input type="password" name="password" required autocomplete="current-password"><button type="button" class="eye" aria-label="Show password">Show</button></div></label>
+<button class="btn" type="submit">Log in</button></form>
+<p class="alt"><a href="/forgot">Forgot password?</a></p>
+<p class="alt">New here? <a href="/signup">Create an account</a></p></div></section>
+<script src="/auth.js" defer></script>

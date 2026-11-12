@@ -1,0 +1,16 @@
+<!--title:Create account | CardioViz-->
+<!--desc:Create a free CardioViz account to save your predictions.-->
+<!--crumb:Sign up-->
+<section class="auth"><div class="authcard">
+<h1>Create your account</h1><p class="sub">It is free and takes a minute.</p>
+<div id="msg" class="msg" role="status" aria-live="polite"></div>
+<form class="contact" data-form="signup" novalidate>
+<label>Full name<input name="name" required minlength="2" maxlength="100" autocomplete="name"></label>
+<label>Email address<input name="email" type="email" required autocomplete="email"></label>
+<label>Password<div class="pw"><input type="password" name="password" required autocomplete="new-password"><button type="button" class="eye" aria-label="Show password">Show</button></div></label>
+<ul class="rules" id="rules"></ul>
+<label>Confirm password<div class="pw"><input type="password" name="confirm" required autocomplete="new-password"><button type="button" class="eye" aria-label="Show password">Show</button></div></label>
+<label class="check"><input type="checkbox" name="consent" required> I agree to the <a href="/terms">terms</a> and the <a href="/privacy">privacy policy</a>.</label>
+<button class="btn" type="submit">Create account</button></form>
+<p class="alt">Already registered? <a href="/login">Log in</a></p></div></section>
+<script src="/auth.js" defer></script>

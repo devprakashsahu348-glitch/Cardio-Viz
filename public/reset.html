@@ -1,0 +1,13 @@
+<!--title:Reset password | CardioViz-->
+<!--desc:Choose a new password for your CardioViz account.-->
+<!--crumb:Reset password-->
+<section class="auth"><div class="authcard">
+<h1>Choose a new password</h1><p class="sub">This link works once and expires 30 minutes after it was sent.</p>
+<div id="msg" class="msg" role="status" aria-live="polite"></div>
+<form class="contact" data-form="reset" novalidate>
+<label>New password<div class="pw"><input type="password" name="password" required autocomplete="new-password"><button type="button" class="eye" aria-label="Show password">Show</button></div></label>
+<ul class="rules" id="rules"></ul>
+<label>Confirm new password<div class="pw"><input type="password" name="confirm" required autocomplete="new-password"><button type="button" class="eye" aria-label="Show password">Show</button></div></label>
+<button class="btn" type="submit">Save new password</button></form>
+<p class="alt"><a href="/forgot">Request a new link</a></p></div></section>
+<script src="/auth.js" defer></script>
