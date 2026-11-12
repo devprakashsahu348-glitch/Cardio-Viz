@@ -9,3 +9,6 @@ CREATE TABLE IF NOT EXISTS predictions (
   id BIGSERIAL PRIMARY KEY, user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   inputs JSONB NOT NULL, probs JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS predictions_user_idx ON predictions (user_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS otps (
+  email TEXT NOT NULL, purpose TEXT NOT NULL, code_hash TEXT NOT NULL, expires_at TIMESTAMPTZ NOT NULL,
+  attempts INT NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (email, purpose));

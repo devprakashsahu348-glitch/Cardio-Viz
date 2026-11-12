@@ -16,9 +16,15 @@
    <label class="check"><input type="checkbox" name="consent" required> I agree to the <a href="/terms">terms</a> and the <a href="/privacy">privacy policy</a>. Predictions are stored only when I press Save.</label>
    <button class="btn" type="submit">Create account</button></form>
  </div>
-<form class="contact" id="ff" style="margin-top:1.5rem"><h2>Forgot your password, or no verification email?</h2><label>Email<input name="email" type="email" required autocomplete="email"></label><div><button class="btn small" data-a="forgot" type="submit">Email me a reset link</button> <button class="btn small ghost" data-a="resend" type="submit">Resend verification email</button></div></form>
+ <form class="contact" id="ff" style="margin-top:1.5rem"><h2>Forgot your password, or no verification code?</h2>
+  <label>Email<input name="email" type="email" required autocomplete="email"></label>
+  <div><button class="btn small" data-a="forgot" type="submit">Email me a reset code</button> <button class="btn small ghost" data-a="resend" type="submit">Resend verification code</button></div></form>
 </div>
-<form class="contact" id="fp" hidden><h2>Choose a new password</h2><label>New password (8+ characters)<input name="password" type="password" required minlength="8" autocomplete="new-password"></label><button class="btn" type="submit">Save new password</button></form>
+<form class="contact" id="fc" hidden><h2 id="fc-t"></h2>
+ <p>We emailed a 6-digit code to <strong id="fc-e"></strong>. It works for 10 minutes.</p>
+ <label>6-digit code<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code"></label>
+ <label id="fpw" hidden>New password (8+ characters)<input name="password" type="password" minlength="8" autocomplete="new-password"></label>
+ <button class="btn" type="submit">Confirm</button> <button class="link" type="button" id="fn">Send a new code</button></form>
 <div id="out" hidden>
  <p>Signed in as <strong id="who"></strong>. <button class="link" id="lo">Log out</button></p>
  <h2>Saved predictions</h2>
@@ -31,16 +37,21 @@
 <script>
 (()=>{const $=id=>document.getElementById(id),say=(t,c)=>{const m=$('am');m.className='msg '+c;m.textContent=t},
 j=async(u,o,m)=>{const r=await fetch(u,o!==undefined||m?{method:m||'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o||{})}:undefined);return{ok:r.ok,d:await r.json().catch(()=>({}))}};
-let RT=null;
-async function init(){const m=location.hash.match(/^#(verify|reset)=([\w.-]+)$/);if(m){history.replaceState(null,'','/account');if(m[1]==='verify'){const r=await j('/api/auth?a=verify',{token:m[2]});say(r.ok?'Email verified. You are logged in.':r.d.error,r.ok?'ok':'err')}else{RT=m[2];$('fp').hidden=false;$('in').hidden=true;return}}load()}
-async function load(){const{d}=await j('/api/auth?a=me');$('in').hidden=!!d.user;$('out').hidden=!d.user;if(!d.user)return;
+let mode='',em='';
+function step(m,e){mode=m;em=e;$('fc').hidden=false;$('in').hidden=true;$('fc-e').textContent=e;$('fc-t').textContent=m==='reset'?'Reset your password':'Verify your email';$('fpw').hidden=m!=='reset';$('fpw').querySelector('input').required=m==='reset';$('fc').querySelector('[name=code]').focus()}
+async function load(){const{d}=await j('/api/auth?a=me');$('fc').hidden=true;$('in').hidden=!!d.user;$('out').hidden=!d.user;if(!d.user)return;
  $('who').textContent=d.user.name+' ('+d.user.email+')';const h=await j('/api/predictions'),rows=h.d.items||[];$('hist').innerHTML='';
  rows.forEach(r=>{const tr=document.createElement('tr'),p=r.probs||{};tr.innerHTML='<td></td>'+['CAD','LAD','LCX','RCA'].map(t=>'<td>'+Math.round((+p[t]||0)*100)+'%</td>').join('')+'<td><button class="link">Delete</button></td>';
   tr.firstChild.textContent=new Date(r.created_at).toLocaleString();tr.querySelector('button').onclick=async()=>{if(confirm('Delete this saved prediction?')){await j('/api/predictions?id='+r.id,{},'DELETE');load()}};$('hist').appendChild(tr)});$('none').hidden=rows.length>0}
-for(const f of [$('fl'),$('fr')])f.onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f));d.consent=!!d.consent;const r=await j('/api/auth?a='+f.dataset.a,d);r.ok?(f.reset(),r.d.verify?say('Account created. Check your email and click the verification link to finish.','ok'):(say('',''),load())):say(r.d.error||'Something went wrong.','err')};
-$('ff').onsubmit=async e=>{e.preventDefault();const a=e.submitter.dataset.a,r=await j('/api/auth?a='+a,Object.fromEntries(new FormData($('ff'))));say(r.ok?'If that email has an account, we sent the message. Check your inbox and spam folder.':r.d.error,r.ok?'ok':'err')};
-$('fp').onsubmit=async e=>{e.preventDefault();const r=await j('/api/auth?a=reset',{token:RT,password:new FormData($('fp')).get('password')});if(r.ok){$('fp').hidden=true;$('fp').reset();say('Password changed. You can log in now.','ok');load()}else say(r.d.error,'err')};
+for(const f of [$('fl'),$('fr')])f.onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f));d.consent=!!d.consent;const r=await j('/api/auth?a='+f.dataset.a,d);
+ if(!r.ok)return say(r.d.error||'Something went wrong.','err');f.reset();if(r.d.verify){say('Account created. Enter the code we emailed you.','ok');step('verify',d.email.trim().toLowerCase())}else{say('','');load()}};
+$('ff').onsubmit=async e=>{e.preventDefault();const a=e.submitter.dataset.a,d=Object.fromEntries(new FormData($('ff'))),r=await j('/api/auth?a='+a,d);
+ if(!r.ok)return say(r.d.error||'Something went wrong.','err');say('If that email has an account, we sent a code. Check your inbox and spam folder.','ok');step(a==='forgot'?'reset':'verify',d.email.trim().toLowerCase())};
+$('fc').onsubmit=async e=>{e.preventDefault();const d={email:em,code:$('fc').code.value.trim()};if(mode==='reset')d.password=$('fc').password.value;
+ const r=await j('/api/auth?a='+(mode==='reset'?'reset':'verify'),d);if(!r.ok)return say(r.d.error||'Something went wrong.','err');$('fc').reset();
+ if(mode==='reset'){say('Password changed. Log in with your new password.','ok');load()}else{say('Email verified. You are logged in.','ok');load()}};
+$('fn').onclick=async()=>{const r=await j('/api/auth?a='+(mode==='reset'?'forgot':'resend'),{email:em});say(r.ok?'A new code was sent if the account exists.':r.d.error,r.ok?'ok':'err')};
 $('lo').onclick=async()=>{await j('/api/auth?a=logout',{});load()};
 $('da').onclick=async()=>{if(confirm('Delete your account and every saved prediction? This cannot be undone.')){await j('/api/auth?a=delete',{});say('Your account and data were deleted.','ok');load()}};
-init()})();
+load()})();
 </script>
