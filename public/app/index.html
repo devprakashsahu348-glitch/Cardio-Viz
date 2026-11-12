@@ -14,16 +14,17 @@
 .inp{display:grid;grid-template-columns:120px 1fr 62px;gap:.5rem;align-items:center;font-size:.85rem;margin:.3rem 0}input[type=range]{width:100%;accent-color:var(--acc)}
 .note{color:var(--mut);font-size:.82rem}a{color:var(--acc)}
 @media(max-width:860px){.app{grid-template-columns:1fr}#cv{height:360px;border-right:0}.side{max-height:none}}
+.legend{position:absolute;right:12px;bottom:8px;font-size:.8rem;color:var(--mut);display:flex;gap:.4rem;align-items:center}.legend i{width:90px;height:8px;border-radius:4px;background:linear-gradient(90deg,hsl(120,75%,45%),hsl(60,75%,45%),hsl(0,75%,45%))}.pre{grid-template-columns:repeat(3,1fr)!important}.pre .card{text-align:center;padding:.5rem}.inp input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc);justify-self:start}
 </style></head><body>
 <div class="warn"><strong>Clinical safety notice:</strong> for decision support and education only, not a diagnosis. This demo uses illustrative weights, not weights trained on patient data. <a href="/">Back to site</a></div>
-<div class="app"><div id="cv"><canvas id="c" aria-label="3D heart with coronary arteries coloured by predicted risk"></canvas><p class="hint">Drag to rotate. Click an artery to select it.</p></div>
-<div class="side"><div class="cards" id="cards"></div><p><button class="card" id="save" type="button">Save this prediction</button> <span id="sv" class="note"></span></p><h2 id="ttl"></h2><div id="shap"></div><h2>Inputs</h2><div id="inp"></div>
+<div class="app"><div id="cv"><canvas id="c" aria-label="3D heart with coronary arteries coloured by predicted risk"></canvas><p class="hint">Drag to rotate. Click an artery to select it.</p><div class="legend">Low <i></i> High risk</div></div>
+<div class="side"><div class="cards" id="cards"></div><p><button class="card" id="save" type="button">Save this prediction</button> <span id="sv" class="note"></span></p><h2 id="ttl"></h2><div id="shap"></div><h2>Try a patient profile</h2><div class="cards pre"><button class="card" data-pre="low" type="button">Low risk</button><button class="card" data-pre="avg" type="button">Average</button><button class="card" data-pre="high" type="button">High risk</button></div><h2>Inputs</h2><div id="inp"></div>
 <p class="note">Contributions are exact SHAP values for a linear model, in log-odds: w × (x − mean) / sd.</p></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const T=['CAD','LAD','LCX','RCA'],TL={CAD:'Overall CAD',LAD:'LAD',LCX:'LCX',RCA:'RCA'},B={CAD:-.2,LAD:-.6,LCX:-1.1,RCA:-.9};
 // name,min,max,step,mean,sd,default, weights CAD,LAD,LCX,RCA, unit
-const F=[['Age',30,90,1,58,10,58,.5,.35,.2,.25,'yr'],['Sex (1 = male)',0,1,1,.5,.5,1,.3,.2,.1,.2,''],['Systolic BP',90,200,1,130,18,130,.25,.15,.1,.1,'mmHg'],['Pulse rate',45,120,1,75,12,75,.05,.05,.05,.05,'bpm'],['Typical chest pain',0,1,1,.5,.5,0,.9,.6,.3,.4,''],['Diabetes',0,1,1,.3,.46,0,.4,.3,.2,.2,''],['Hypertension',0,1,1,.6,.49,0,.35,.25,.1,.15,''],['LDL',50,250,1,110,35,110,.25,.2,.1,.15,'mg/dL'],['HDL',20,90,1,40,10,40,-.3,-.2,-.1,-.15,'mg/dL'],['Triglycerides',50,400,1,150,80,150,.2,.1,.1,.1,'mg/dL'],['Fasting glucose',70,300,1,110,50,110,.25,.2,.15,.1,'mg/dL'],['ST elevation',0,1,1,.1,.3,0,.3,.4,.1,.1,''],['T inversion',0,1,1,.3,.46,0,.5,.4,.2,.2,''],['Ejection fraction',20,70,1,47,8,47,-.5,-.45,-.2,-.2,'%'],['Region with RWMA',0,4,1,.5,.9,0,.5,.45,.2,.3,''],['BMI',15,40,.5,27,4,27,.1,.05,.05,.05,'kg/m²']];
+const F=[['Age',30,90,1,58,10,58,.5,.35,.2,.25,'yr'],['Male sex',0,1,1,.5,.5,1,.3,.2,.1,.2,''],['Systolic BP',90,200,1,130,18,130,.25,.15,.1,.1,'mmHg'],['Pulse rate',45,120,1,75,12,75,.05,.05,.05,.05,'bpm'],['Typical chest pain',0,1,1,.5,.5,0,.9,.6,.3,.4,''],['Diabetes',0,1,1,.3,.46,0,.4,.3,.2,.2,''],['Hypertension',0,1,1,.6,.49,0,.35,.25,.1,.15,''],['LDL',50,250,1,110,35,110,.25,.2,.1,.15,'mg/dL'],['HDL',20,90,1,40,10,40,-.3,-.2,-.1,-.15,'mg/dL'],['Triglycerides',50,400,1,150,80,150,.2,.1,.1,.1,'mg/dL'],['Fasting glucose',70,300,1,110,50,110,.25,.2,.15,.1,'mg/dL'],['ST elevation',0,1,1,.1,.3,0,.3,.4,.1,.1,''],['T inversion',0,1,1,.3,.46,0,.5,.4,.2,.2,''],['Ejection fraction',20,70,1,47,8,47,-.5,-.45,-.2,-.2,'%'],['Region with RWMA',0,4,1,.5,.9,0,.5,.45,.2,.3,''],['BMI',15,40,.5,27,4,27,.1,.05,.05,.05,'kg/m²']];
 const X=F.map(f=>f[6]);let sel='CAD';
 const phi=(t,j)=>F[j][7+T.indexOf(t)]*(X[j]-F[j][4])/F[j][5];
 const prob=t=>1/(1+Math.exp(-(B[t]+F.reduce((s,_,j)=>s+phi(t,j),0))));
@@ -35,16 +36,23 @@ function ui(){
  const r=F.map((f,j)=>[f[0],phi(sel,j),X[j],f[11]]).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])),m=Math.max(.5,...r.map(a=>Math.abs(a[1])));
  $('shap').innerHTML=r.map(a=>`<div class="row"><span>${a[0]}</span><div class="bar"><i style="left:${a[1]<0?50-Math.abs(a[1])/m*50:50}%;width:${Math.abs(a[1])/m*50}%;background:${a[1]<0?'var(--teal)':'var(--acc)'}"></i></div><span>${a[1]>0?'+':''}${a[1].toFixed(2)}</span></div>`).join('');
  paint()}
-$('inp').innerHTML=F.map((f,j)=>`<label class="inp"><span>${f[0]}</span><input type="range" min="${f[1]}" max="${f[2]}" step="${f[3]}" value="${f[6]}" data-j="${j}"><output>${f[6]} ${f[11]}</output></label>`).join('');
-$('inp').querySelectorAll('input').forEach(i=>i.oninput=()=>{const j=+i.dataset.j;X[j]=+i.value;i.nextSibling.textContent=i.value+' '+F[j][11];ui()});
+const BIN=f=>f[1]===0&&f[2]===1;
+$('inp').innerHTML=F.map((f,j)=>BIN(f)?`<label class="inp"><span>${f[0]}</span><input type="checkbox" data-j="${j}" ${f[6]?'checked':''}><output>${f[6]?'Yes':'No'}</output></label>`:`<label class="inp"><span>${f[0]}</span><input type="range" min="${f[1]}" max="${f[2]}" step="${f[3]}" value="${f[6]}" data-j="${j}"><output>${f[6]} ${f[11]}</output></label>`).join('');
+$('inp').querySelectorAll('input').forEach(i=>i.oninput=()=>{const j=+i.dataset.j,c=i.type==='checkbox';X[j]=c?+i.checked:+i.value;i.nextSibling.textContent=c?(i.checked?'Yes':'No'):i.value+' '+F[j][11];ui()});
+const PRE={low:[38,0,115,68,0,0,0,90,55,100,90,0,0,60,0,23],avg:F.map(f=>f[6]),high:[68,1,160,88,1,1,1,170,32,240,180,1,1,32,3,31]};
+document.querySelectorAll('[data-pre]').forEach(b=>b.onclick=()=>{PRE[b.dataset.pre].forEach((v,j)=>{const i=$('inp').querySelector(`[data-j="${j}"]`);if(i.type==='checkbox')i.checked=!!v;else i.value=v;i.dispatchEvent(new Event('input'))})});
 // 3D
 const cv=$('c'),R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});R.setPixelRatio(Math.min(devicePixelRatio,1.5));
-const S=new THREE.Scene(),C=new THREE.PerspectiveCamera(40,1,.1,50);C.position.set(0,0,5);
-S.add(new THREE.AmbientLight(0xffffff,.7));const L=new THREE.DirectionalLight(0xffffff,.8);L.position.set(3,4,5);S.add(L);
-const G=new THREE.Group();G.scale.set(1,1.15,.9);S.add(G);
-G.add(new THREE.Mesh(new THREE.SphereGeometry(1,28,20),new THREE.MeshStandardMaterial({color:0x6b2a33,roughness:.7,transparent:true,opacity:.92})));
+const S=new THREE.Scene(),C=new THREE.PerspectiveCamera(40,1,.1,50);C.position.set(0,0,5.2);
+S.add(new THREE.AmbientLight(0xffffff,.75));const L=new THREE.DirectionalLight(0xffffff,.8);L.position.set(3,4,5);S.add(L);
+const G=new THREE.Group();G.rotation.set(.1,-.45,.12);S.add(G);
+const H=(x,y,z)=>{const l=Math.hypot(x,y,z)||1;x/=l;y/=l;z/=l;const t=(y+1)/2,w=.42+.58*Math.pow(t,.55);let Y=y*1.15;if(y>.35)Y-=.3*Math.exp(-x*x*9)*Math.min(1,(y-.35)/.4);return new THREE.Vector3(x*w*1.12,Y,z*w*.95)};
+const geo=new THREE.SphereGeometry(1,48,36),pa=geo.attributes.position;
+for(let i=0;i<pa.count;i++){const v=H(pa.getX(i),pa.getY(i),pa.getZ(i));pa.setXYZ(i,v.x,v.y,v.z)}geo.computeVertexNormals();
+G.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x7a2a35,roughness:.65})));
+function tag(t,pos){const c=document.createElement('canvas');c.width=128;c.height=56;const x=c.getContext('2d');x.fillStyle='rgba(255,255,255,.93)';x.fillRect(0,0,128,56);x.strokeStyle='#8c1d2c';x.lineWidth=4;x.strokeRect(2,2,124,52);x.fillStyle='#1c2430';x.font='bold 32px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(t,64,30);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c)}));s.position.copy(pos);s.scale.set(.5,.22,1);return s}
 const P={LAD:[[0,.9,.5],[.25,.5,.9],[.3,0,.98],[.2,-.6,.8],[.05,-1,.4]],LCX:[[0,.9,.5],[-.5,.75,.5],[-.8,.4,.5],[-.95,-.2,.2],[-.7,-.7,.2]],RCA:[[0,.95,.4],[.6,.8,.5],[.9,.3,.6],[.95,-.3,.4],[.7,-.8,.3]]},M={};
-Object.entries(P).forEach(([t,p])=>{const m=new THREE.MeshStandardMaterial({roughness:.4}),mesh=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(p.map(v=>new THREE.Vector3(...v).multiplyScalar(1.04))),40,.07,8),m);mesh.userData.t=t;G.add(mesh);M[t]=mesh});
+Object.entries(P).forEach(([t,p])=>{const pts=p.map(v=>H(...v).multiplyScalar(1.035)),mesh=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),48,.055,8),new THREE.MeshStandardMaterial({roughness:.4}));mesh.userData.t=t;G.add(mesh);M[t]=mesh;G.add(tag(t,pts[2].clone().multiplyScalar(1.25)))});
 function paint(){T.slice(1).forEach(t=>{const c=new THREE.Color().setHSL(120*(1-prob(t))/360,.75,.45);M[t].material.color=c;M[t].material.emissive=t===sel?c.clone().multiplyScalar(.5):new THREE.Color(0)})}
 function size(){const b=cv.parentElement;R.setSize(b.clientWidth,b.clientHeight,false);C.aspect=b.clientWidth/b.clientHeight;C.updateProjectionMatrix()}
 addEventListener('resize',size);size();
